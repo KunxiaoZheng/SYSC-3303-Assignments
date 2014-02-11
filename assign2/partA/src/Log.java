@@ -8,4 +8,7 @@ public class Log {
 	public synchronized static void removeWorker(){
 		nWorkers--;
 	}
+	public synchronized static int getNumWorker(){
+		return nWorkers;
+	}
 }
