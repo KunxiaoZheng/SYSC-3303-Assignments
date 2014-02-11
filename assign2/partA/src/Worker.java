@@ -1,5 +1,3 @@
-package partA;
-
 import java.util.concurrent.Callable;
 
 

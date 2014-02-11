@@ -1,4 +1,3 @@
-package partA;
 
 public class Log {
 	public static int nWorkers;
