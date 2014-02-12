@@ -10,70 +10,79 @@
 RT_TASK Accelerometer;
 RT_TASK gyroscope;
 RT_TASK fusion;
-RT_MUTEX a;
+RT_MUTEX a,g;
 
-typedef struct
-{
-  int num;
-  char c;
-}t_input;
-
-static int accQ[5];
-static int qyroQ[30];
+static int accNum;
+static int gyroNum;
 static int done;
-static int result[20];
-static int aPosition=0;
-static int gPosition=0;
-static int rPosiont=0;
+static int finalNum[100];
+static int sizeQ=35;
+static int sizeFinal=100;
+static int gyroQ[35];
 
 
 void Acc()
 {
-  while (done!=0){
-    accQ[aPosition]=rand()%100+1;
-    aPosition++;
-    if(aPosition==5){
-      aPosition=0;
-    }
-    sleep(30000);
-  }
+	int aPosition=0;
+	while (done!=0){
+
+		rt_mutex_acquire(&a,TM_INFINITE);
+		accNum=rand()%100+1;
+		rt_mutex_release(&a);
+
+		aPosition++;
+		if(aPosition==5){
+			aPosition=0;
+		}
+		usleep(33334);
+	}
 }
 void gyro()
 {
-  int temp=0;
-  int flag;
-  int ave=0;
-  int result;
-  while (done!=0){
-    temp=rand()%366;
-      result=result+qyroQ[flag-1];
-      flag--;
-      qyroQ[gPosition]=result;
-    gPosition++;
-    if(gPosition>=30){
-      gPosition=0;
-    }
-    sleep(300000);    
-  }
+	int tempNum=0;
+	int flag=0;
+	int result;
+	int gPosition=0;
+	while (done!=0){
+		result=0;
+		flag=0;
+		while(flag<sizeQ){
+			result+=gyroQ[flag];
+			flag++;
+		}
+		result=result/sizeQ;
+		tempNum=rand()%366;
+		gyroQ[gPosition]=tempNum;
+		gPosition++;
+		if(gPosition>=sizeQ){
+			gPosition=0;
+		}
+
+		rt_mutex_acquire(&g,TM_INFINITE);
+		gyroNum=result;
+		rt_mutex_release(&g);
+
+		usleep(3334);
+	}
 }
 void fusionT(){
-  int flag=0;
-  int aResult=0;
-  int gResult=0;
-  int g_size;
-  while(flag<20){
-    aResult=accQ[aPosition];  
-    g_size=30;
-    while(g_size!=0){
-      gResult=gResult+ qyroQ[g_size-1];
-      g_size--;
-    }  
-    gResult=gResult/30;
-aResult=(aResult+gResult)/2;
-result[flag]=aResult;
-flag++;
-    sleep(60000);    
-  }
+	int flag=0;
+	int aResult=0;
+	int gResult=0;
+	int g_size;
+	while(flag<sizeFinal){
+		usleep(16667);
+		rt_mutex_acquire(&a,TM_INFINITE);
+		aResult=accNum;
+		rt_mutex_release(&a);
+		rt_mutex_acquire(&g,TM_INFINITE);
+		gResult=gyroNum;
+		rt_mutex_release(&g);
+		aResult=(aResult+gResult)/2;
+		finalNum[flag]=aResult;
+		flag++;
+	}
+	done= 0;
 }
 
 void catch_signal(int sig)
@@ -82,34 +91,43 @@ void catch_signal(int sig)
 
 int main(int argc, char* argv[])
 {
-  rt_print_auto_init(1);
-  signal(SIGTERM, catch_signal);
-  signal(SIGINT, catch_signal);
-  mlockall(MCL_CURRENT|MCL_FUTURE);
+	rt_print_auto_init(1);
+	signal(SIGTERM, catch_signal);
+	signal(SIGINT, catch_signal);
+	mlockall(MCL_CURRENT|MCL_FUTURE);
 
-  
+	done=1;
 
-  int err =rt_mutex_create(&a,"MyMutex"); 
+	int flag=0;
+	while (flag<sizeQ){
+		gyroQ[flag]=rand()%366;
+		flag++;
+	}
 
-  rt_task_create(&Accelerometer,NULL , 0, 0, T_JOINABLE);
-  rt_task_create(&gyroscope, NULL, 0, 0, T_JOINABLE);
-  rt_task_create(&fusion, NULL, 0, 0, T_JOINABLE);
-  rt_task_start(&gyroscope, &gyro,NULL);
-  rt_task_start(&Accelerometer, &Acc, NULL);
-  rt_task_start(&fusion, &fusionT, NULL);
+	int err =rt_mutex_create(&a,"MyMutex");
+	err =rt_mutex_create(&g,NULL);
 
-  rt_task_join(&gyroscope);
-  rt_task_join(&Accelerometer);
-  rt_task_join(&fusion);
+	rt_task_create(&Accelerometer,NULL , 0, 0, T_JOINABLE);
+	rt_task_create(&gyroscope, NULL, 0, 0, T_JOINABLE);
+	rt_task_create(&fusion, NULL, 0, 0, T_JOINABLE);
+	rt_task_start(&gyroscope, &gyro,NULL);
+	rt_task_start(&Accelerometer, &Acc, NULL);
+	rt_task_start(&fusion, &fusionT, NULL);
 
-  rt_task_delete(&gyroscope);
-  rt_task_delete(&Accelerometer);
-  rt_task_delete(&fusion);
+	rt_task_join(&gyroscope);
+	rt_task_join(&Accelerometer);
+	rt_task_join(&fusion);
 
-  rt_mutex_delete(&a);
-int flag=0;
-while (flag<20){
-rt_printf("%d",result[flag]);
-flag++;
-}
+	rt_task_delete(&gyroscope);
+	rt_task_delete(&Accelerometer);
+	rt_task_delete(&fusion);
+
+	rt_mutex_delete(&a);
+	rt_mutex_delete(&g);
+
+	flag=0;
+	while (flag<sizeFinal){
+		rt_printf("%d\n",finalNum[flag]);
+		flag++;
+	}
 }
