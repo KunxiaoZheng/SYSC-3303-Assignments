@@ -21,14 +21,14 @@ static int sizeFinal=100;
 static int gyroQ[35];
 
 
-void Acc()
+void Acc()//thread for the accelerometer
 {
 	int aPosition=0;
 	while (done!=0){
 
-		rt_mutex_acquire(&a,TM_INFINITE);
+		rt_mutex_acquire(&a,TM_INFINITE);//acquire the mutex
 		accNum=rand()%100+1;
-		rt_mutex_release(&a);
+		rt_mutex_release(&a);//release the mutex
 
 		aPosition++;
 		if(aPosition==5){
@@ -37,47 +37,42 @@ void Acc()
 		usleep(33334);
 	}
 }
-void gyro()
+void gyro()//thread for the gyroscope
 {
 	int tempNum=0;
 	int flag=0;
-	int result;
 	int gPosition=0;
 	while (done!=0){
-		result=0;
-		flag=0;
-		while(flag<sizeQ){
-			result+=gyroQ[flag];
-			flag++;
-		}
-		result=result/sizeQ;
 		tempNum=rand()%366;
+		rt_mutex_acquire(&g,TM_INFINITE);//acquire the mutex
 		gyroQ[gPosition]=tempNum;
+		rt_mutex_release(&g);//release the mutex
 		gPosition++;
 		if(gPosition>=sizeQ){
 			gPosition=0;
 		}
 
-		rt_mutex_acquire(&g,TM_INFINITE);
-		gyroNum=result;
-		rt_mutex_release(&g);
-
 		usleep(3334);
 	}
+
 }
-void fusionT(){
+void fusionT(){//thread for the fusion
 	int flag=0;
 	int aResult=0;
 	int gResult=0;
-	int g_size;
+	int g_size,temp;
 	while(flag<sizeFinal){
 		usleep(16667);
-		rt_mutex_acquire(&a,TM_INFINITE);
+		temp=0;
+		rt_mutex_acquire(&a,TM_INFINITE);//acquire the mutex
 		aResult=accNum;
-		rt_mutex_release(&a);
-		rt_mutex_acquire(&g,TM_INFINITE);
-		gResult=gyroNum;
-		rt_mutex_release(&g);
+		rt_mutex_release(&a);//release the mutex
+		rt_mutex_acquire(&g,TM_INFINITE);//acquire the mutex
+		for(int i=0; i<sizeQ;i++){//calculation the average in the gyroQ
+			temp=temp+gyroQ[i];
+		}
+		gResult=temp/30;
+		rt_mutex_release(&g);//release the mutex
 		aResult=(aResult+gResult)/2;
 		finalNum[flag]=aResult;
 		flag++;
@@ -104,7 +99,7 @@ int main(int argc, char* argv[])
 		flag++;
 	}
 
-	int err =rt_mutex_create(&a,"MyMutex");
+	int err =rt_mutex_create(&a,"MyMutex");//creating mutex
 	err =rt_mutex_create(&g,NULL);
 
 	rt_task_create(&Accelerometer,NULL , 0, 0, T_JOINABLE);
@@ -126,8 +121,8 @@ int main(int argc, char* argv[])
 	rt_mutex_delete(&g);
 
 	flag=0;
-	while (flag<sizeFinal){
-		rt_printf("%d\n",finalNum[flag]);
+	while (flag<sizeFinal){//print out result
+		rt_printf("Result%d: %d\n",flag,finalNum[flag]);
 		flag++;
 	}
 }

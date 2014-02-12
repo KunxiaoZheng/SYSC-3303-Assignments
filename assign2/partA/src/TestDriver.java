@@ -8,13 +8,16 @@ public class TestDriver {
 	public static ArrayList<Future<String>> workerList;
 
 	public static void main(String[] args) throws InterruptedException, ExecutionException {
+		//creating thread pool executor
 		final ThreadPoolExecutor executor= (ThreadPoolExecutor)Executors.newCachedThreadPool();
 		Random generator = new Random(); 
 		final ArrayList<Future<String>> workerList=new ArrayList<Future<String>>(500);
+		//adding workers
 		for(int i =1;i<=500;i++){
 			Worker worker=new Worker(i, generator.nextInt(19999) + 1);
 			workerList.add(executor.submit(worker));
 		}
+		//a thread that displays info about executor
 		executor.submit(new Runnable(){
 			@Override
 			public void run() {
@@ -47,7 +50,7 @@ public class TestDriver {
 		});
 		String result;		
 
-
+		//print out the worker who is finished
 		while(workerList.size()!=0){
 			for (int i = 0; i < workerList.size(); i++) {
 				if (workerList.get(i).isDone()) {
@@ -57,8 +60,7 @@ public class TestDriver {
 				}
 			}
 		}
-		executor.shutdown();
-		//int val=test.get();     
+		executor.shutdown();    
 		Thread.sleep(2200);
 		System.out.println("done");
 	}	

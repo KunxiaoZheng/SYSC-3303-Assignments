@@ -13,12 +13,12 @@ public class Worker implements Callable<String>{
 	}
 	@Override
 	public String call() throws Exception {
-		Log.addWorker();
-		start=System.currentTimeMillis();
+		Log.addWorker();	//add this worker to the log
+		start=System.currentTimeMillis();//get the start time
 		Thread.sleep(time);
 		endLog=Log.getNumWorker();		
-		end=System.currentTimeMillis();
-		Log.removeWorker();		
+		end=System.currentTimeMillis();//get the end time
+		Log.removeWorker();		//remove this worker from the log
 		return "Worker #"+name+": start with "+startLog+" workers in the log and end with "
 		+endLog+" workers in the log"+
 		"\nworked for "+(int)(end-start)+

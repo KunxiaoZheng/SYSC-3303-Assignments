@@ -1,0 +1,3 @@
+To run the program, first use the makefile to compile the code,
+then use the xterm go to the file that contains the code and type in
+ ./assign2B to start the program.
